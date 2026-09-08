@@ -61,10 +61,59 @@ user_management_host_ssh_from: []
 # @var user_management_users:type: list
 # @var user_management_users:required: false
 # @var user_management_users:example: >
+# # Every key an entry accepts. user_management_group_users and
+# # user_management_host_users take exactly the same keys.
 # user_management_users:
-#   - name: john.doe
-#     gecos: John Doe,Room 123,212-555-0000,212-555-3456,john.doe@world.org
-#     state: present
+#   # User's Linux login name.
+#   - name: john.doe  # str, required
+#     # Whether the account should exist or not, taking action if the
+#     # state is different from what is stated.
+#     state: present  # str, required, choices: absent|present
+#     # Optionally sets the description (aka GECOS) of user account: Full
+#     # Name, Room Number, Work Phone, Home Phone, Other
+#     gecos: "John Doe,Room 123,212-555-0000,,john.doe@world.org"  # str, optional
+#     # If provided, set the user's password to the provided encrypted
+#     # hash password. To create an account with a locked/disabled
+#     # password, set this to `!` or `*`. How to generate encrypted
+#     # passwords: Ansible Documentation -
+#     # https://docs.ansible.com/ansible/latest/reference_appendices/faq.html#how-do-i-generate-encrypted-passwords-for-the-user-module
+#     password: "$6$rounds=656000$salt$hash"  # str, optional
+#     # Optionally sets the user's primary group (takes a group name).
+#     primary_group: developers  # str, optional
+#     # List of groups user will be added to. By default, the user is
+#     # removed from all other groups. Configure `groups_append` to modify
+#     # this. When set to an empty string `''`, the user is removed from
+#     # all groups except the primary group.
+#     secondary_groups: ["docker", "sudo"]  # list, optional
+#     # If `true`, add the user to the groups specified in groups. If
+#     # `false`, user will only be added to the groups specified in
+#     # `secondary_groups`, removing them from all other groups.
+#     groups_append: true  # bool, optional, choices: False|True
+#     # Overwrites 'user_management_default_shell'.
+#     shell: /bin/bash  # str, optional
+#     # Custom `$HOME` root path. Must be specified as absolute path.
+#     absolute_home_path: /opt/john.doe  # str, optional
+#     # Unless set to false, a home directory will be created for the user
+#     # when the account is created or if the home directory does not
+#     # exist.
+#     home_create: true  # bool, optional, choices: False|True
+#     # If set to `true` when used with `home:`, attempt to move the
+#     # user's old home directory to the specified directory if it isn't
+#     # already there and the old home exists.
+#     home_move: false  # bool, optional, choices: False|True
+#     # The SSH public key(s), as a list or (since Ansible 1.9) url.
+#     ssh_public_keys: ["ssh-ed25519 AAAAC3Nz... john.doe"]  # list, optional
+#     # `from=""` value added to `authorized_keys` if user has
+#     # `user_management_users.ssh_public_keys` defined. If
+#     # `user_management_default_ssh_from` or `custom_ssh_from` is defined
+#     # and not set to `'*'`, all values will be concatenated.
+#     custom_ssh_from: ["10.1.0.0/16"]  # list, optional
+#     # This only affects `state=absent`. It forces removal of the user
+#     # and associated directories on supported platforms.
+#     userdel_force: false  # bool, optional, choices: False|True
+#     # This only affects `state=absent`. It attempts to remove
+#     # directories associated with the user.
+#     userdel_remove: false  # bool, optional, choices: False|True
 user_management_users:
   - name: user_management_john.doe
     absolute_home_path: null
@@ -86,6 +135,7 @@ user_management_users:
 # @var user_management_group_users:type: list
 # @var user_management_group_users:required: false
 # @var user_management_group_users:example: >
+# # Same keys as user_management_users.
 # user_management_group_users:
 #   - name: deploy
 #     state: present
@@ -95,6 +145,7 @@ user_management_group_users: []
 # @var user_management_host_users:type: list
 # @var user_management_host_users:required: false
 # @var user_management_host_users:example: >
+# # Same keys as user_management_users.
 # user_management_host_users:
 #   - name: backup-agent
 #     state: present
