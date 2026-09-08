@@ -1,6 +1,8 @@
 # Ansible
 meta/.galaxy_install_info
 .ansible/
+.collections/
+ansible_collections/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -169,6 +171,3 @@ cython_debug/
 # VSCode
 .vscode/
 .devcontainer/
-
-# Custom ignores
-.ci

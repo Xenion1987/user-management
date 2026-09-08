@@ -1,16 +1,70 @@
 ---
+# Variable documentation for ansible-doctor.
+#
+# Valid @var subtypes: description | type | required | value | example | deprecated
+# There is no ":default:" subtype - the default is read from the value below.
+# Do not use the short form "# @var name: text": it writes to ":value:" and
+# collides with the auto-detected value, which aborts ansible-doctor.
+#
+# Keys *inside* `user_management_users` / `user_management_host_users` cannot be
+# expressed as @var annotations; they are documented in the table in HEADER.md.
+
+# @var user_management_default_home_root:description: Custom default `$HOME` root path. Omitted if `null`.
+# @var user_management_default_home_root:type: str
+# @var user_management_default_home_root:required: false
 user_management_default_home_root: null
+
+# @var user_management_default_home_move:description: If set to `true` when used with `home`, attempt to move the user's old home directory to the specified directory if it isn't there already and the old home exists.
+# @var user_management_default_home_move:type: bool
+# @var user_management_default_home_move:required: false
 user_management_default_home_move: false
+
+# @var user_management_default_shell:description: Default user's shell. Omitted if `null`.
+# @var user_management_default_shell:type: str
+# @var user_management_default_shell:required: false
 user_management_default_shell: null
 
+
+# @var user_management_default_primary_group:description: Custom default primary user group. Omitted if `null`.
+# @var user_management_default_primary_group:type: str
+# @var user_management_default_primary_group:required: false
 user_management_default_primary_group: null
+
+# @var user_management_default_secondary_groups:description: Custom default secondary user groups. Omitted if empty.
+# @var user_management_default_secondary_groups:type: list
+# @var user_management_default_secondary_groups:required: false
 user_management_default_secondary_groups: []
+
+# @var user_management_default_secondary_groups_append:description: If `true`, add the user to the groups specified in `groups`. If `false`, user will only be added to the groups specified in `groups`, removing them from all other groups.
+# @var user_management_default_secondary_groups_append:type: bool
+# @var user_management_default_secondary_groups_append:required: false
 user_management_default_secondary_groups_append: false
 
+
+# @var user_management_default_ssh_from:description: Default, global `from=""` value added to `authorized_keys` for each user having `user_management_users.ssh_public_keys` defined
+# @var user_management_default_ssh_from:type: list
+# @var user_management_default_ssh_from:required: false
 user_management_default_ssh_from: []
+
+# @var user_management_group_ssh_from:description: `group_vars` specific `from=""` value added to `authorized_keys` for each user having `user_management_users.ssh_public_keys` defined
+# @var user_management_group_ssh_from:type: list
+# @var user_management_group_ssh_from:required: false
 user_management_group_ssh_from: []
+
+# @var user_management_host_ssh_from:description: `host_vars` specific `from=""` value added to `authorized_keys` for each user having `user_management_users.ssh_public_keys` defined
+# @var user_management_host_ssh_from:type: list
+# @var user_management_host_ssh_from:required: false
 user_management_host_ssh_from: []
 
+
+# @var user_management_users:description: List of users to be managed. See the per-user key table in the README for the keys each entry accepts.
+# @var user_management_users:type: list
+# @var user_management_users:required: false
+# @var user_management_users:example: >
+# user_management_users:
+#   - name: john.doe
+#     gecos: John Doe,Room 123,212-555-0000,212-555-3456,john.doe@world.org
+#     state: present
 user_management_users:
   - name: user_management_john.doe
     absolute_home_path: null
@@ -19,7 +73,6 @@ user_management_users:
     groups_append: false
     home_create: false
     home_move: false
-    # password: 'mypassword' sha512 encrypted
     password: $6$hUyQQf65j3czoiSV$gckRY17sJxEKgiHPqXszseZs.6x5Ehu995GixUnPnSB018J4ijM7Xw.3/B6xmVTlqUJzPQhITMH3hpHXwD14r.
     primary_group: null
     secondary_groups: []
@@ -28,3 +81,12 @@ user_management_users:
     state: absent
     userdel_force: false
     userdel_remove: false
+
+# @var user_management_host_users:description: Additional users merged on top of `user_management_users`, so host_vars can add hosts-specific accounts without copying or overriding the whole list. Takes the same keys.
+# @var user_management_host_users:type: list
+# @var user_management_host_users:required: false
+# @var user_management_host_users:example: >
+# user_management_host_users:
+#   - name: backup-agent
+#     state: present
+user_management_host_users: []

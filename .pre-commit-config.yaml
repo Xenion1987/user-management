@@ -1,14 +1,37 @@
 ---
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         name: Cleanup trailing whitespaces
         args: [--markdown-linebreak-ext=md]
-  - repo: https://github.com/ansible-community/ansible-lint
-    rev: v25.1.1
+      - id: end-of-file-fixer
+
+  - repo: local
     hooks:
+      - id: ansible-doctor
+        name: Generate README.md with ansible-doctor
+        entry: uv run ansible-doctor
+        language: system
+        pass_filenames: false
+        files: ^(defaults/|meta/|HEADER\.md|\.ansibledoctor\.yml)
+        stages: [pre-commit]
+      # The lint hooks deliberately run repo-wide (pass_filenames: false) so
+      # they execute the exact same command as the CI lint job. Passing single
+      # files changes how ansible-lint resolves config and context, which makes
+      # "green locally, red in CI" possible.
       - id: ansible-lint
-        name: Check Ansible files
-        args: []
+        name: Run ansible-lint
+        entry: uv run ansible-lint
+        language: system
+        pass_filenames: false
+        types: [yaml]
+        stages: [pre-commit]
+      - id: yamllint
+        name: Run yamllint
+        entry: uv run yamllint .
+        language: system
+        pass_filenames: false
+        types: [yaml]
+        stages: [pre-commit]

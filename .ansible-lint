@@ -1,12 +1,15 @@
 ---
 skip_list:
-  - role-name
-  - schema[meta]
-  - yaml[line-length]
-  - name[template]
+  - role-name # template role dir is not the final role name
+  - schema[meta] # galaxy_info carries a namespace key
+  - yaml[line-length] # handled by yamllint (line-length disabled)
+  - name[template] # allow task names starting with a Jinja expression
 
+# .github holds GitHub Actions workflows, not Ansible content.
+# molecule/ is intentionally NOT excluded - the test playbooks are the ones
+# most likely to contain mistakes.
 exclude_paths:
   - .ansible/
   - .git/
   - .github/
-  - venv/
+  - .venv/

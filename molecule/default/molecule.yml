@@ -2,9 +2,24 @@
 dependency:
   name: galaxy
 driver:
-  name: docker
+  name: podman
 platforms:
   - name: instance
-    image: "${MOLECULE_DISTRO:-debian:12}"
-    pre_build_image: true
+    image: "docker.io/geerlingguy/docker-${MOLECULE_DISTRO:-debian13}-ansible:latest"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
     privileged: true
+    pre_build_image: true
+    # Passed to podman verbatim: molecule-plugins 26.7 rejects `cgroupns_mode`
+    # outright, and while its schema declares `tmpfs` an array, the underlying
+    # containers.podman.podman_container module still expects a dict - so the
+    # typed keys fail either validation or the module.
+    extra_opts:
+      - "--cgroupns=host"
+      - "--tmpfs=/run:rw"
+      - "--tmpfs=/tmp:rw"
+provisioner:
+  name: ansible
+verifier:
+  name: ansible

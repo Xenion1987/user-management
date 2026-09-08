@@ -4,6 +4,7 @@
   gather_facts: false
   vars:
     test_user: molecule_test
+    host_user: molecule_host_user
 
   tasks:
     - name: "GETENT | PASSWD | Ensure user exists: {{ test_user }}"
@@ -50,3 +51,24 @@
       ansible.builtin.assert:
         that:
           - authorized_keys.stdout_lines[0] == 'from="1.1.1.1,2.2.2.2,3.3.3.3,4.4.4.4" ssh-rsa AAAAB3NzakGUg/a4nViDJGhuFty+4yR8fWQ== ansible-role-user-management-1'
+
+    # `user_management_host_users` must be applied on top of
+    # `user_management_users`, not instead of it.
+    - name: "GETENT | PASSWD | Ensure host-level user exists: {{ host_user }}"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ host_user }}"
+    - name: ASSERT | Host-level user's GECOS
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[host_user][3] == 'Host Only,Room 9,,,host.only@azbycx.tld'
+        fail_msg: "user_management_host_users was not merged into the managed users"
+    - name: COMMAND | Get host-level user's 'authorized_keys'
+      changed_when: false
+      register: host_authorized_keys
+      ansible.builtin.command:
+        cmd: cat {{ ansible_facts.getent_passwd[host_user][4] }}/.ssh/authorized_keys
+    - name: ASSERT | Host-level user's authorized key
+      ansible.builtin.assert:
+        that:
+          - host_authorized_keys.stdout_lines[0] == 'from="1.1.1.1,2.2.2.2,3.3.3.3" ssh-rsa AAAAB3NzaHostOnlyKeyForMoleculeTest== molecule-host-user-1'

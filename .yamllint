@@ -1,11 +1,11 @@
 ---
 extends: default
 
+# .github is linted: workflow YAML is the largest chunk of YAML in the repo.
 ignore:
   - .ansible/
   - .git/
-  - .github/
-  - venv/
+  - .venv/
 
 rules:
   braces:
@@ -17,3 +17,6 @@ rules:
     forbid-implicit-octal: true
     forbid-explicit-octal: true
   line-length: disable
+  # GitHub Actions requires the "on:" key, which YAML 1.1 reads as a boolean.
+  truthy:
+    check-keys: false

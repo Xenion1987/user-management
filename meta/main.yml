@@ -1,6 +1,5 @@
 ---
-collections:
-  - community.general
+collections: []
 
 dependencies: []
 
@@ -9,8 +8,8 @@ galaxy_info:
   author: "Xenion1987"
   description: "Manage users and their SSH public key enrollment via Ansible on Linux systems."
   company: "Access-InTech"
-  license: "BSD, MIT"
-  min_ansible_version: "2.11"
+  license: "MIT"
+  min_ansible_version: "2.20"
   namespace: "xenion1987"
   platforms:
     - name: Debian

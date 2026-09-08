@@ -1,0 +1,23 @@
+---
+# Shapes the notes that `generate_release_notes` produces in the release
+# workflow. Dependency bumps are excluded: they are tooling-only and never
+# change the role for its consumers. Dependabot creates the `dependencies`
+# label itself on its first pull request.
+changelog:
+  exclude:
+    labels:
+      - "dependencies"
+    authors:
+      - "dependabot"
+      - "dependabot[bot]"
+  categories:
+    - title: "Features"
+      labels:
+        - "enhancement"
+    - title: "Fixes"
+      labels:
+        - "bug"
+    # Catch-all, must stay last.
+    - title: "Other changes"
+      labels:
+        - "*"
