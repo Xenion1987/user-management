@@ -40,6 +40,52 @@ copying or overriding the shared list.
 
 ---
 
+## Where users are defined
+
+Ansible *replaces* a list when a more specific scope redefines it, so a single
+variable cannot carry global, group and host users at once. The role reads three
+lists and merges them by user name:
+
+| Set in                   | Variable                       | Wins over     |
+| ------------------------ | ------------------------------ | ------------- |
+| `group_vars/all.yml`     | `user_management_users`        | -             |
+| `group_vars/<group>.yml` | `user_management_group_users`  | global        |
+| `host_vars/<host>.yml`   | `user_management_host_users`   | group, global |
+
+A group or a single host can therefore add accounts - or redefine one global
+account - without copying the whole list:
+
+```yaml
+# group_vars/all.yml
+user_management_users:
+  - name: ops
+    state: present
+    ssh_public_keys: ["ssh-ed25519 AAAAC3Nz... ops"]
+
+# group_vars/dbservers.yml - adds one account for that group only
+user_management_group_users:
+  - name: postgres-admin
+    state: present
+
+# host_vars/db01.yml - gives `ops` a different shell on this host only
+user_management_host_users:
+  - name: ops
+    state: present
+    shell: /bin/sh
+    ssh_public_keys: ["ssh-ed25519 AAAAC3Nz... ops"]
+```
+
+> [!IMPORTANT]
+> Whole entries are replaced, not merged key by key. A redefining entry has to
+> carry every key it wants - anything left out falls back to the role default,
+> not to the value from the less specific level. That is why `ssh_public_keys`
+> is repeated in the `host_vars` example above.
+
+Users are processed in name order, which keeps runs deterministic. Names that
+appear on more than one level are listed by a `debug` task, visible with `-v`.
+
+---
+
 ## Rolling out to many hosts
 
 Per managed user the role issues three module calls (`user`, the `.ssh`

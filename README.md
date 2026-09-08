@@ -40,6 +40,52 @@ copying or overriding the shared list.
 
 ---
 
+## Where users are defined
+
+Ansible *replaces* a list when a more specific scope redefines it, so a single
+variable cannot carry global, group and host users at once. The role reads three
+lists and merges them by user name:
+
+| Set in                   | Variable                       | Wins over     |
+| ------------------------ | ------------------------------ | ------------- |
+| `group_vars/all.yml`     | `user_management_users`        | -             |
+| `group_vars/<group>.yml` | `user_management_group_users`  | global        |
+| `host_vars/<host>.yml`   | `user_management_host_users`   | group, global |
+
+A group or a single host can therefore add accounts - or redefine one global
+account - without copying the whole list:
+
+```yaml
+# group_vars/all.yml
+user_management_users:
+  - name: ops
+    state: present
+    ssh_public_keys: ["ssh-ed25519 AAAAC3Nz... ops"]
+
+# group_vars/dbservers.yml - adds one account for that group only
+user_management_group_users:
+  - name: postgres-admin
+    state: present
+
+# host_vars/db01.yml - gives `ops` a different shell on this host only
+user_management_host_users:
+  - name: ops
+    state: present
+    shell: /bin/sh
+    ssh_public_keys: ["ssh-ed25519 AAAAC3Nz... ops"]
+```
+
+> [!IMPORTANT]
+> Whole entries are replaced, not merged key by key. A redefining entry has to
+> carry every key it wants - anything left out falls back to the role default,
+> not to the value from the less specific level. That is why `ssh_public_keys`
+> is repeated in the `host_vars` example above.
+
+Users are processed in name order, which keeps runs deterministic. Names that
+appear on more than one level are listed by a `debug` task, visible with `-v`.
+
+---
+
 ## Rolling out to many hosts
 
 Per managed user the role issues three module calls (`user`, the `.ssh`
@@ -335,6 +381,7 @@ Manage users and their SSH public key enrollment via Ansible on Linux systems.
   - [user_management_default_shell](#user_management_default_shell)
   - [user_management_default_ssh_from](#user_management_default_ssh_from)
   - [user_management_group_ssh_from](#user_management_group_ssh_from)
+  - [user_management_group_users](#user_management_group_users)
   - [user_management_host_ssh_from](#user_management_host_ssh_from)
   - [user_management_host_users](#user_management_host_users)
   - [user_management_users](#user_management_users)
@@ -454,6 +501,27 @@ user_management_default_ssh_from: []
 user_management_group_ssh_from: []
 ```
 
+### user_management_group_users
+
+Users added for one inventory group, typically set in `group_vars/<group>.yml`. Merged on top of `user_management_users` by user name, so a group can add accounts - or redefine a global one - without copying the whole list. Takes the same keys.
+
+**_Required:_** false<br />
+**_Type:_** list<br />
+
+#### Default value
+
+```YAML
+user_management_group_users: []
+```
+
+#### Example usage
+
+```YAML
+user_management_group_users:
+  - name: deploy
+    state: present
+```
+
 ### user_management_host_ssh_from
 
 `host_vars` specific `from=""` value added to `authorized_keys` for each user having `user_management_users.ssh_public_keys` defined
@@ -469,7 +537,7 @@ user_management_host_ssh_from: []
 
 ### user_management_host_users
 
-Additional users merged on top of `user_management_users`, so host_vars can add hosts-specific accounts without copying or overriding the whole list. Takes the same keys.
+Users added for a single host, typically set in `host_vars/<host>.yml`. Merged last and therefore wins over the group and global lists for the same user name. Takes the same keys.
 
 **_Required:_** false<br />
 **_Type:_** list<br />
@@ -490,7 +558,7 @@ user_management_host_users:
 
 ### user_management_users
 
-List of users to be managed. See the per-user key table in the README for the keys each entry accepts.
+Global baseline list of users to be managed, typically set in `group_vars/all.yml`. Merged by user name with `user_management_group_users` and `user_management_host_users`. See the per-user key table in the README for the keys each entry accepts.
 
 **_Required:_** false<br />
 **_Type:_** list<br />
