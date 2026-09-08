@@ -21,15 +21,25 @@
     state: directory
     mode: "0755"
 
-- name: INCLUDE TASKS | 'manage_user_groups'
-  loop: "{{ user_management_all_users }}"
-  ansible.builtin.include_tasks:
-    file: manage_user_groups.yml
+# Groups are created from a flattened, de-duplicated list rather than by
+# including a task file once per user. Two reasons: a dynamic `include_tasks`
+# with `loop` is rebuilt and re-templated by the controller for every item on
+# every host, which does not scale to many hosts; and users commonly share
+# groups, so de-duplicating turns N-users module calls into one call per
+# distinct group. `import_tasks` is not an alternative here - it is static and
+# cannot be combined with `loop`.
+- name: GROUP | Ensure per-user primary groups exist
+  loop: "{{ user_management_all_users | selectattr('primary_group', 'defined') | map(attribute='primary_group') | select('truthy') | unique | list }}"
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
 
-# - name: INCLUDE TASKS | 'manage_user'
-#   loop: "{{ user_management_all_users }}"
-#   ansible.builtin.include_tasks:
-#     file: manage_user.yml
+- name: GROUP | Ensure per-user secondary groups exist
+  loop: "{{ user_management_all_users | selectattr('secondary_groups', 'defined') | map(attribute='secondary_groups') | flatten | select('truthy') | unique | list }}"
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+
 - name: "BLOCK | Manage user"
   block:
     - name: "USER | Manage user"
@@ -58,22 +68,17 @@
         remove: "{{ item.userdel_remove | default(false) }}"
         # Use user_management_users.shell if defined, else use default shell as defined in defaults file
         shell: "{{ item.shell if item.shell is defined and item.shell else user_management_default_shell if user_management_default_shell is defined and user_management_default_shell else omit }}"
+        # Set in the same call instead of a second `user` task: the module
+        # compares the stored hash itself, so a separate pass only doubled the
+        # module invocations. The guard keeps the previous semantics exactly -
+        # untouched unless a non-empty password is given for a present user.
+        password: >-
+          {{ item.password
+             if (item.state | d('present')) == 'present'
+                and item.password is defined and item.password is truthy
+             else omit }}
         state: "{{ item.state | d('present') }}"
-    - name: "USER | Manage password"
-      loop: "{{ user_management_all_users }}"
-      loop_control:
-        label: "{{ item.name }}"
-      when:
-        - item.state | d("present") == "present"
-        - item.password is defined and item.password is truthy
-      ansible.builtin.user:
-        name: "{{ item.name }}"
-        password: "{{ item.password | default(omit) }}"
 
-# - name: INCLUDE TASKS | 'manage_authorized_keys'
-#   loop: "{{ user_management_all_users }}"
-#   ansible.builtin.include_tasks:
-#     file: manage_authorized_keys.yml
 - name: BLOCK | Manage authorized_keys files
   block:
     - name: "GETENT | passwd"
