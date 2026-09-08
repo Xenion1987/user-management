@@ -1,6 +1,23 @@
 ---
-# Users from `user_management_users` plus any host-specific additions from
-# `user_management_host_users`. Both lists take the same keys, and every task
-# below loops over this combined list - that way host_vars can add users
-# without copying or overriding the whole `user_management_users` list.
-user_management_all_users: "{{ (user_management_users | default([])) + (user_management_host_users | default([])) }}"
+# Three levels of user definitions, because Ansible *replaces* a list when a
+# more specific scope redefines it instead of merging - so each level needs its
+# own variable name:
+#
+#   group_vars/all.yml   -> user_management_users        (global baseline)
+#   group_vars/<grp>.yml -> user_management_group_users  (per group)
+#   host_vars/<host>.yml -> user_management_host_users   (per host)
+#
+# This mirrors the existing user_management_{default,group,host}_ssh_from trio.
+user_management_layered_users: "{{ (user_management_users | default([])) + (user_management_group_users | default([])) + (user_management_host_users | default([])) }}"
+
+# Merged by user name, most specific level wins: `groupby` sorts by name and
+# groups the entries in list order, so the last entry of each group is the one
+# from the most specific level. A name may therefore be redefined per group or
+# per host without copying the global list - the replacing entry has to be
+# complete, since whole entries are replaced rather than merged key by key.
+# Side effect: users are processed in name order, which is deterministic.
+user_management_all_users: "{{ user_management_layered_users | groupby('name') | map(attribute='1') | map('last') | list }}"
+
+# Names defined on more than one level. '1.1' is the second entry of a group and
+# only exists when a name occurs at least twice - reported by a debug task.
+user_management_overridden_users: "{{ user_management_layered_users | groupby('name') | selectattr('1.1', 'defined') | map(attribute='0') | list }}"

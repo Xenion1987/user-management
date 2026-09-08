@@ -5,6 +5,8 @@
   vars:
     test_user: molecule_test
     host_user: molecule_host_user
+    group_user: molecule_group_user
+    override_user: molecule_override
 
   tasks:
     - name: "GETENT | PASSWD | Ensure user exists: {{ test_user }}"
@@ -72,3 +74,37 @@
       ansible.builtin.assert:
         that:
           - host_authorized_keys.stdout_lines[0] == 'from="1.1.1.1,2.2.2.2,3.3.3.3" ssh-rsa AAAAB3NzaHostOnlyKeyForMoleculeTest== molecule-host-user-1'
+
+    # group_vars level must be applied as well.
+    - name: "GETENT | PASSWD | Ensure group-level user exists: {{ group_user }}"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ group_user }}"
+    - name: ASSERT | Group-level user's GECOS
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[group_user][3] == 'Group Level,Room 7,,,group.level@azbycx.tld'
+        fail_msg: "user_management_group_users was not merged into the managed users"
+
+    # Defined on all three levels - the host definition has to win.
+    - name: "GETENT | PASSWD | Ensure overridden user exists: {{ override_user }}"
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ override_user }}"
+    - name: ASSERT | Most specific level wins
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[override_user][3] == 'Host Level Wins,,,,'
+        fail_msg: "precedence is wrong: expected the host_vars definition to win"
+
+    # The overridden user enrolls no keys, so the role must not have created a
+    # .ssh directory for it.
+    - name: STAT | '.ssh' of a user without keys
+      register: no_keys_ssh
+      ansible.builtin.stat:
+        path: "{{ ansible_facts.getent_passwd[override_user][4] }}/.ssh"
+    - name: ASSERT | No '.ssh' directory for a user without keys
+      ansible.builtin.assert:
+        that:
+          - not no_keys_ssh.stat.exists
+        fail_msg: "a .ssh directory was created for a user that enrolls no keys"

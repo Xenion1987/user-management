@@ -57,7 +57,7 @@ user_management_group_ssh_from: []
 user_management_host_ssh_from: []
 
 
-# @var user_management_users:description: List of users to be managed. See the per-user key table in the README for the keys each entry accepts.
+# @var user_management_users:description: Global baseline list of users to be managed, typically set in `group_vars/all.yml`. Merged by user name with `user_management_group_users` and `user_management_host_users`. See the per-user key table in the README for the keys each entry accepts.
 # @var user_management_users:type: list
 # @var user_management_users:required: false
 # @var user_management_users:example: >
@@ -82,7 +82,16 @@ user_management_users:
     userdel_force: false
     userdel_remove: false
 
-# @var user_management_host_users:description: Additional users merged on top of `user_management_users`, so host_vars can add hosts-specific accounts without copying or overriding the whole list. Takes the same keys.
+# @var user_management_group_users:description: Users added for one inventory group, typically set in `group_vars/<group>.yml`. Merged on top of `user_management_users` by user name, so a group can add accounts - or redefine a global one - without copying the whole list. Takes the same keys.
+# @var user_management_group_users:type: list
+# @var user_management_group_users:required: false
+# @var user_management_group_users:example: >
+# user_management_group_users:
+#   - name: deploy
+#     state: present
+user_management_group_users: []
+
+# @var user_management_host_users:description: Users added for a single host, typically set in `host_vars/<host>.yml`. Merged last and therefore wins over the group and global lists for the same user name. Takes the same keys.
 # @var user_management_host_users:type: list
 # @var user_management_host_users:required: false
 # @var user_management_host_users:example: >

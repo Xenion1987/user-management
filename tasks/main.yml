@@ -21,6 +21,15 @@
     state: directory
     mode: "0755"
 
+# Only rendered with -v, and skipped entirely when nothing collides.
+- name: DEBUG | Report users redefined by a more specific level
+  when: user_management_overridden_users | length > 0
+  ansible.builtin.debug:
+    verbosity: 1
+    msg: >-
+      Redefined by group_vars/host_vars, most specific level wins:
+      {{ user_management_overridden_users | join(', ') }}
+
 # Groups are created from a flattened, de-duplicated list rather than by
 # including a task file once per user. Two reasons: a dynamic `include_tasks`
 # with `loop` is rebuilt and re-templated by the controller for every item on
@@ -88,7 +97,11 @@
       loop: "{{ user_management_all_users }}"
       loop_control:
         label: "{{ item.name }}"
-      when: item.state | d('present') == "present"
+      when:
+        - item.state | d('present') == "present"
+        # No keys, no .ssh directory - saves one module call per user that
+        # does not enroll any.
+        - item.ssh_public_keys is defined
       ansible.builtin.file:
         state: directory
         path: "{{ ansible_facts.getent_passwd[item.name][4] }}/.ssh"

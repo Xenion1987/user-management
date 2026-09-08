@@ -41,6 +41,15 @@
         user_management_default_ssh_from: ["1.1.1.1"]
         user_management_group_ssh_from: ["2.2.2.2"]
         user_management_host_ssh_from: ["3.3.3.3"]
+        # Exercises the group level, and the override: `molecule_override` is
+        # defined on all three levels, the host definition has to win.
+        user_management_group_users:
+          - name: molecule_group_user
+            gecos: Group Level,Room 7,,,group.level@azbycx.tld
+            ssh_public_keys:
+              - ssh-rsa AAAAB3NzaGroupLevelKeyForMoleculeTest== molecule-group-user-1
+          - name: molecule_override
+            gecos: Group Level Loses,,,,
         # Exercises the host-level addition: these users are merged with
         # `user_management_users` instead of replacing them.
         user_management_host_users:
@@ -48,7 +57,11 @@
             gecos: Host Only,Room 9,,,host.only@azbycx.tld
             ssh_public_keys:
               - ssh-rsa AAAAB3NzaHostOnlyKeyForMoleculeTest== molecule-host-user-1
+          - name: molecule_override
+            gecos: Host Level Wins,,,,
         user_management_users:
+          - name: molecule_override
+            gecos: Global Level Loses,,,,
           - name: molecule_test
             absolute_home_path: /opt/molecule_test
             custom_ssh_from: ["4.4.4.4"]
