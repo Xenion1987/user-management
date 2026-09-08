@@ -1,0 +1,86 @@
+---
+# Default is the current working directory.
+# base_dir:
+
+role:
+  # Default is the basename of 'role_name'.
+  # name:
+  # Auto-detect if the given directory is a role, can be disabled
+  # to parse loose files instead.
+  autodetect: true
+
+# Don't write anything to file system.
+dry_run: false
+
+# exclude_files: []
+# # Examples
+# # exclude_files:
+# #   - molecule/
+# #   - files/**/*.py
+
+# # Exclude tags from automatic detection. Configured tags are only skipped
+# # if the tag is not used in an annotation.
+# exclude_tags: []
+
+logging:
+  # Possible options: debug|info|warning| error|critical
+  level: "info"
+  # JSON logging can be enabled if a parsable output is required.
+  json: false
+
+template:
+  # Name of the template to be used. In most cases, this is the name of a directory that is attached to the
+  # the `src` path or Git repo (see example below).
+  name: readme
+
+  # Template provider source. Currently supported providers are `local|git`.
+  # The `local` provider loads templates from the local file system. This provider
+  # is used by default and uses the built-in templates.
+  #
+  # Examples:
+  # template:
+  #   name: readme
+  #   src: local>/tmp/custom_templates/
+  #
+  # The `git` provider allows templates to be loaded from a git repository. At the moment
+  # the functions of this provider are limited and only public repositories are supported.
+  #
+  # Examples:
+  # template:
+  #   src: git>https://github.com/thegeeklab/ansible-doctor
+  #   name: ansibledoctor/templates/readme
+  #
+  # template:
+  #   src: git>git@github.com:thegeeklab/ansible-doctor.git
+  #   name: ansibledoctor/templates/readme
+  #
+  # template:
+  #   src: git>git@github.com:thegeeklab/ansible-doctor.git#branch-or-tag
+  #   name: ansibledoctor/templates/readme
+  # src:
+
+  # options:
+  #   # Configures whether to tabulate variables in the output. When set to `True`,
+  #   # variables will be displayed in a tabular format instead of plain markdown sections.
+  #   # NOTE: This option does not support rendering multiline code blocks.
+  #   tabulate_vars: False
+
+renderer:
+  # By default, double spaces, spaces before and after line breaks or tab characters, etc.
+  # are automatically removed before the template is rendered. As a result, indenting
+  # with spaces does not work. If you want to use spaces to indent text, you must disable
+  # this option.
+  # autotrim: True
+  # Load custom header from given file and append template output to it before write.
+  include_header: "HEADER.md"
+  # Output path (file or directory). If a directory, the filename is derived from the template name.
+  # dest:
+  # Don't ask to overwrite if output file exists.
+  force_overwrite: true
+
+# Define custom subtypes for annotations. To use custom subtypes a custom template is required.
+# annotations:
+#   var:
+#     subtypes: ["custom", "another_custom"]
+#   tag:
+#     subtypes: ["custom_field"]

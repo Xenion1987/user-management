@@ -1,30 +1,53 @@
 ---
 - name: Converge
   hosts: all
+  # No setup run needed: the role populates ansible_facts.getent_passwd
+  # itself via its own getent task, and nothing here uses general facts.
   gather_facts: false
 
   pre_tasks:
+    # Wrapped in `sh -ec`: the podman connection plugin runs `raw` without a
+    # shell, so an unwrapped multi-line script is handed to the OCI runtime as
+    # an executable name and fails with rc 127. The default images
+    # (geerlingguy/docker-*-ansible) already ship Python, so this is a no-op
+    # there; it exists so the scenario also works against plain distro images,
+    # which have no interpreter for any module to use.
     - name: PRE_TASK | Install python3
       changed_when: false
-      ansible.builtin.raw: |
-        id_like=$(grep -Ewo "debian|fedora" /etc/os-release | uniq)
-        case "${id_like}" in
-          debian)
+      ansible.builtin.raw: |-
+        sh -ec '
+          command -v python3 >/dev/null 2>&1 && exit 0
+          if command -v apt >/dev/null 2>&1; then
+            export DEBIAN_FRONTEND=noninteractive
             apt update
-            apt -y install python3
-          ;;
-          fedora)
+            apt -y --no-install-recommends install python3
+          elif command -v dnf >/dev/null 2>&1; then
             dnf makecache
             dnf -y install python3
-          ;;
-        esac
+          elif command -v yum >/dev/null 2>&1; then
+            yum makecache
+            yum -y install python3
+          elif command -v apk >/dev/null 2>&1; then
+            apk add --no-cache --update python3
+          fi
+        '
 
   roles:
-    - role: xenion1987.user_management
+    # Resolved by path, not by a Galaxy FQRN: the role then loads no matter
+    # what the checkout directory is called, and no roles path has to be
+    # configured for the test run.
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
       vars:
         user_management_default_ssh_from: ["1.1.1.1"]
         user_management_group_ssh_from: ["2.2.2.2"]
         user_management_host_ssh_from: ["3.3.3.3"]
+        # Exercises the host-level addition: these users are merged with
+        # `user_management_users` instead of replacing them.
+        user_management_host_users:
+          - name: molecule_host_user
+            gecos: Host Only,Room 9,,,host.only@azbycx.tld
+            ssh_public_keys:
+              - ssh-rsa AAAAB3NzaHostOnlyKeyForMoleculeTest== molecule-host-user-1
         user_management_users:
           - name: molecule_test
             absolute_home_path: /opt/molecule_test

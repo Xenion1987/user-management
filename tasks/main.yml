@@ -2,38 +2,38 @@
 # tasks file for roles/user_management
 
 - name: "GROUP | Ensure default primary group is created"
-  when: user_management_default_primary_group is defined and user_management_default_primary_group
+  when: user_management_default_primary_group is defined and user_management_default_primary_group is truthy
   ansible.builtin.group:
     name: "{{ user_management_default_primary_group }}"
     state: present
 
 - name: GROUP | Ensure default secondary groups are created
   loop: "{{ user_management_default_secondary_groups }}"
-  when: user_management_default_secondary_groups is defined and user_management_default_secondary_groups
+  when: user_management_default_secondary_groups is defined and user_management_default_secondary_groups is truthy
   ansible.builtin.group:
     name: "{{ item }}"
     state: present
 
 - name: FILE | Ensure default home root directory exists
-  when: user_management_default_home_root is defined and user_management_default_home_root
+  when: user_management_default_home_root is defined and user_management_default_home_root is truthy
   ansible.builtin.file:
     path: "{{ user_management_default_home_root }}"
     state: directory
     mode: "0755"
 
 - name: INCLUDE TASKS | 'manage_user_groups'
-  loop: "{{ user_management_users }}"
+  loop: "{{ user_management_all_users }}"
   ansible.builtin.include_tasks:
     file: manage_user_groups.yml
 
 # - name: INCLUDE TASKS | 'manage_user'
-#   loop: "{{ user_management_users }}"
+#   loop: "{{ user_management_all_users }}"
 #   ansible.builtin.include_tasks:
 #     file: manage_user.yml
 - name: "BLOCK | Manage user"
   block:
     - name: "USER | Manage user"
-      loop: "{{ user_management_users }}"
+      loop: "{{ user_management_all_users }}"
       loop_control:
         label: "name: {{ item.name }}; state: {{ item.state | d('present') }}"
       ansible.builtin.user:
@@ -60,18 +60,18 @@
         shell: "{{ item.shell if item.shell is defined and item.shell else user_management_default_shell if user_management_default_shell is defined and user_management_default_shell else omit }}"
         state: "{{ item.state | d('present') }}"
     - name: "USER | Manage password"
-      loop: "{{ user_management_users }}"
+      loop: "{{ user_management_all_users }}"
       loop_control:
         label: "{{ item.name }}"
       when:
         - item.state | d("present") == "present"
-        - item.password is defined and item.password
+        - item.password is defined and item.password is truthy
       ansible.builtin.user:
         name: "{{ item.name }}"
         password: "{{ item.password | default(omit) }}"
 
 # - name: INCLUDE TASKS | 'manage_authorized_keys'
-#   loop: "{{ user_management_users }}"
+#   loop: "{{ user_management_all_users }}"
 #   ansible.builtin.include_tasks:
 #     file: manage_authorized_keys.yml
 - name: BLOCK | Manage authorized_keys files
@@ -80,7 +80,7 @@
       ansible.builtin.getent:
         database: passwd
     - name: "FILE | Ensure '.ssh' directory exists"
-      loop: "{{ user_management_users }}"
+      loop: "{{ user_management_all_users }}"
       loop_control:
         label: "{{ item.name }}"
       when: item.state | d('present') == "present"
@@ -92,7 +92,7 @@
         group: "{{ ansible_facts.getent_passwd[item.name][2] }}"
 
     - name: "TEMPLATE | Manage authorized key(s)"
-      loop: "{{ user_management_users }}"
+      loop: "{{ user_management_all_users }}"
       loop_control:
         label: "{{ item.name }}"
       when:

@@ -1,0 +1,35 @@
+---
+# "chore" prefixes keep dependency bumps out of the release pipeline:
+# CI tooling and lockfile updates do not change the role, so they must not
+# cut a new version. Use "fix"/"feat" only for changes consumers see.
+version: 2
+updates:
+  # Action pins in .github/workflows/ (checkout, setup-uv, action-gh-release).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Dev tooling pinned in uv.lock (ansible-core, molecule, ansible-lint, ...).
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      dev-tooling:
+        patterns:
+          - "*"

@@ -27,7 +27,7 @@
 - name: "USER | Manage password: {{ item.name }}"
   when:
     - item.state | d("present") == "present"
-    - item.password is defined and item.password
+    - item.password is defined and item.password is truthy
   ansible.builtin.user:
     name: "{{ item.name }}"
     password: "{{ item.password | default(omit) }}"

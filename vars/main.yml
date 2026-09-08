@@ -1,0 +1,6 @@
+---
+# Users from `user_management_users` plus any host-specific additions from
+# `user_management_host_users`. Both lists take the same keys, and every task
+# below loops over this combined list - that way host_vars can add users
+# without copying or overriding the whole `user_management_users` list.
+user_management_all_users: "{{ (user_management_users | default([])) + (user_management_host_users | default([])) }}"

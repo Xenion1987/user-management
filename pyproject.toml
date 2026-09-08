@@ -1,0 +1,24 @@
+[project]
+name = "ansible-role-user-management"
+version = "0.1.0"
+description = "Manage users and their SSH public key enrollment via Ansible on Linux systems."
+readme = "README.md"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "ansible-core>=2.20"
+]
+
+[dependency-groups]
+dev = [
+    "ansible-core>=2.20",
+    "ansible-dev-tools",
+    "ansible-doctor",
+    "prek",
+    "molecule",
+    "molecule-plugins[podman]",
+]
+
+# Plain `uv sync` installs only [project].dependencies (ansible-core).
+# The toolchain lives in the dev group: `uv sync --group dev`.
+[tool.uv]
+default-groups = []

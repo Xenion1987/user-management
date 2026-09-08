@@ -7,55 +7,111 @@ on:
     branches:
       - main
 
-defaults:
-  run:
-    working-directory: "user_management"
+env:
+  ROLE_NAME: ${{ github.event.repository.name }}
+  PY_COLORS: "1"
+  ANSIBLE_FORCE_COLOR: "1"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: "user_management"
+          path: ${{ env.ROLE_NAME }}
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       - name: Install test dependencies
-        run: pip3 install -q yamllint
+        run: uv sync --group dev
+        working-directory: ${{ env.ROLE_NAME }}
 
-      - name: Run tests
-        run: yamllint .
+      - name: Run yamllint
+        run: uv run yamllint .
+        working-directory: ${{ env.ROLE_NAME }}
+
+      - name: Run ansible-lint
+        run: uv run ansible-lint
+        working-directory: ${{ env.ROLE_NAME }}
 
   test:
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         distro:
-          - "debian:12"
-          - "rockylinux:9"
-          - "ubuntu:24.04"
+          - "debian13"
+          - "rockylinux9"
+          - "ubuntu2404"
+        # Each ansible-core release supports a specific range of controller
+        # Python versions, so version and interpreter are paired in one matrix
+        # dimension instead of a cross product. The oldest pair must match
+        # min_ansible_version in meta/main.yml and the ansible-core floor in
+        # pyproject.toml - only tested versions may be advertised.
+        ansible:
+          - version: "2.20"
+            python: "3.13"
+          - version: "2.21"
+            python: "3.14"
+    name: test (${{ matrix.distro }}, ansible ${{ matrix.ansible.version }})
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: "user_management"
+          path: ${{ env.ROLE_NAME }}
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
-          python-version: "3.x"
+          python-version: ${{ matrix.ansible.python }}
 
       - name: Install test dependencies
-        run: pip3 install ansible molecule molecule-plugins[docker] docker passlib jinja2
+        run: |
+          uv sync \
+            --group dev \
+            --python "${{ matrix.ansible.python }}" \
+            --upgrade-package "ansible-core==${{ matrix.ansible.version }}.*"
+        working-directory: ${{ env.ROLE_NAME }}
+
+      - name: Verify resolved versions
+        run: |
+          uv run ansible --version
+          uv run python --version
+        working-directory: ${{ env.ROLE_NAME }}
 
       - name: Run tests
-        run: molecule test
+        run: uv run molecule test
         env:
-          PY_COLORS: "1"
-          ANSIBLE_FORCE_COLOR: "1"
           MOLECULE_DISTRO: ${{ matrix.distro }}
+        working-directory: ${{ env.ROLE_NAME }}
+
+  # Stable aggregate check. Branch protection requires `lint` and
+  # `test-matrix` only, so adding a distro or an ansible-core version never
+  # means editing the ruleset's required-status-check list again.
+  # `if: always()` is essential: a skipped required check counts as passing,
+  # so the gate must run and fail explicitly.
+  test-matrix:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Assert every matrix job succeeded
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          set -euo pipefail
+          echo "matrix result: ${RESULT}"
+          if [ "${RESULT}" != "success" ]; then
+            echo "::error::test matrix did not succeed (${RESULT})"
+            exit 1
+          fi
