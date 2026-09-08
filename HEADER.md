@@ -40,6 +40,35 @@ copying or overriding the shared list.
 
 ---
 
+## Rolling out to many hosts
+
+Per managed user the role issues three module calls (`user`, the `.ssh`
+directory, the `authorized_keys` template), plus one `group` call per
+*distinct* group rather than per user - group names are flattened and
+de-duplicated first. The role also contains no `include_tasks` inside a `loop`:
+a dynamic include is rebuilt and re-templated by the controller for every item
+on every host, which is what makes that pattern collapse once host counts grow.
+`import_tasks` is no way around it either, being static and incompatible with
+`loop`.
+
+The remaining cost scales with users x hosts, and there three controller
+settings dominate the wall time - none of them part of this role:
+
+| Setting | Why it matters |
+| --- | --- |
+| `forks` (default `5`) | 200 hosts are otherwise worked through in 40 sequential waves |
+| `pipelining = True` | drops several SSH round trips per module call; needs `requiretty` disabled in sudoers |
+| `strategy: free` | with the default `linear`, every single task is a barrier across all hosts |
+
+Adding `-o ControlMaster=auto -o ControlPersist=60s` to `ssh_args` helps as
+well, as does keeping fact gathering small (`gather_subset: min` or a fact
+cache) - this role needs no facts of its own.
+
+To find out where the time actually goes in your environment, run a regular
+play with `ANSIBLE_CALLBACKS_ENABLED=ansible.posix.profile_tasks`.
+
+---
+
 ## Per-user keys
 
 Every entry of `user_management_users` and `user_management_host_users` accepts
